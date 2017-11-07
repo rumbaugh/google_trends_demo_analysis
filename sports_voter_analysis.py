@@ -107,3 +107,32 @@ class Demo:
         self.clf.fit(train_X,train_y)
         self.predicted_y=self.clf.predict(test_X)
         self.CV_scores=cross_val_score(self.clf,X,target,cv=self.NCV)
+
+    def region_vote_estimate(self):
+        self.region_vote_dict = {reg: np.median(self.df['Trump 2016 Vote'][self.df.region == reg]) for reg in self.region_dict.keys()}
+        
+    def BayesP(self, n_obs, observed_dict, prior_dict, search_grid, prob_dens = None):
+        try:
+            self.region_vote_dict
+        except AttributeError:
+            print "Set region_vote_dict"
+            return
+        if len(prior_dict.keys()) != len(observed_dict.keys()):
+            print "observed_dict and prior_dict don't have same number of keys"
+            return
+        if np.count_nonzero(np.sort(prior_dict.keys()) != np.sort(observed_dict.keys())) > 0:
+            print "observed_dict and prior_dict don't have same keys"
+            return
+        if np.shape(search_grid)[1] != len(observed_dict.keys()):
+            print 'search grid dimensions invalid'
+            return
+        n_comp, n_srch = len(prior_dict.keys()), np.shape(search_grid)[0]
+        if np.shape(prob_dens) == ():
+            if n_comp > 2:
+                print "Must specify prob_dens if n_comp > 2"
+                return
+            search_grid = search_grid[np.argsort(search_grid[:,0])]
+            prob_dens = np.zeros(n_srch)
+            prob_dens[0], prob_dens[-1] = 0.5 * search_grid[0][0] + 0.5 * search_grid[1][0], 1 - 0.5 * search_grid[-1][0] - 0.5 * search_grid[-2][0] 
+            prob_dens[1:-1] = 0.5 * (search_grid[2:,0] - search_grid[:-2])
+        outprob = np.zeros(np.shape(search_grid)[1])
